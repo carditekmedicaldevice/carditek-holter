@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Admin — Carditek Holter Portal</title>
+<link rel="icon" href="assets/favicon-32.png" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <img src="assets/carditek-logo.png" alt="Carditek" />
+    <span class="name">Carditek</span>
+    <span class="nav-role">Admin</span>
+  </div>
+  <div class="nav-actions">
+    <button class="btn btn-outline btn-sm" onclick="logout()">Log out</button>
+  </div>
+</nav>
+
+<main class="container-wide" id="app" style="display:none">
+
+  <!-- ===== LIST VIEW ===== -->
+  <div id="listView">
+    <div class="section-title">
+      <h1>Patients</h1>
+      <button class="btn btn-primary" onclick="openAddPatient()">+ Add patient</button>
+    </div>
+
+    <input class="search-input" id="searchBox" placeholder="Search by name, ID, or phone..." style="margin-bottom:16px" />
+
+    <div class="card" id="addPatientCard" style="display:none">
+      <h2>Add a new patient</h2>
+      <p class="muted">This creates their login for you. You'll get a temporary password to give them.</p>
+      <label>Full name</label>
+      <input id="apName" />
+      <div class="field-row">
+        <div><label>Age</label><input id="apAge" type="number" min="0" max="120" /></div>
+        <div><label>Sex</label>
+          <select id="apSex"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select>
+        </div>
+      </div>
+      <label>Phone number (they'll log in with this)</label>
+      <input id="apPhone" inputmode="tel" />
+      <label>Email (optional)</label>
+      <input id="apEmail" type="email" />
+      <label>Patient ID (leave blank to auto-generate)</label>
+      <input id="apCode" placeholder="e.g. CTK-000123" />
+      <div style="margin-top:16px;display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="createPatient()">Create patient</button>
+        <button class="btn btn-outline" onclick="closeAddPatient()">Cancel</button>
+      </div>
+      <div class="msg" id="addPatientMsg"></div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead><tr><th>Patient ID</th><th>Name</th><th>Phone</th><th>Status</th><th>Start</th></tr></thead>
+        <tbody id="patientTableBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none">No patients found.</div>
+    </div>
+  </div>
+
+  <!-- ===== DETAIL VIEW ===== -->
+  <div id="detailView" style="display:none">
+    <button class="btn btn-outline btn-sm" onclick="showList()" style="margin-bottom:16px">&larr; Back to patients</button>
+
+    <div class="card">
+      <div class="section-title">
+        <h2 id="dName">—</h2>
+        <span class="badge" id="dStatusBadge">—</span>
+      </div>
+
+      <div class="field-row">
+        <div><label>Patient ID</label><input id="dCode" /></div>
+        <div><label>Study status</label>
+          <select id="dStatus"><option value="active">Active</option><option value="completed">Completed</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div><label>Age</label><input id="dAge" type="number" /></div>
+        <div><label>Sex</label><select id="dSex"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+      </div>
+      <div class="field-row">
+        <div><label>Phone</label><input id="dPhone" /></div>
+        <div><label>Email</label><input id="dEmail" type="email" /></div>
+      </div>
+      <label>Referring doctor</label>
+      <input id="dDoctor" />
+      <label>Holter device serial number</label>
+      <input id="dDevice" />
+      <div class="field-row">
+        <div><label>Monitoring start date</label><input id="dStart" type="date" /></div>
+        <div><label>Monitoring end date</label><input id="dEnd" type="date" /></div>
+      </div>
+      <label>Medical history</label>
+      <textarea id="dHistory"></textarea>
+
+      <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="saveDetail()">Save changes</button>
+        <button class="btn btn-outline" onclick="resetPatientPassword()">Reset password</button>
+        <button class="btn btn-outline" onclick="exportCsv()">Export CSV</button>
+        <button class="btn btn-outline" onclick="exportPdf()">Export PDF</button>
+      </div>
+      <div class="msg" id="detailMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Symptom entries</h2>
+      <table>
+        <thead><tr><th>When</th><th>Symptoms</th><th>Severity</th><th>Activity</th><th>Duration</th><th>Note</th></tr></thead>
+        <tbody id="entriesTableBody"></tbody>
+      </table>
+      <div class="empty-state" id="entriesEmpty" style="display:none">No entries logged yet.</div>
+    </div>
+  </div>
+</main>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/common.js"></script>
+<script>
+let allPatients = [];
+let currentDetail = null;
+let currentEntries = [];
+let adminSession = null;
+
+function openAddPatient() { document.getElementById("addPatientCard").style.display = "block"; }
+function closeAddPatient() { document.getElementById("addPatientCard").style.display = "none"; }
+
+async function callAdminApi(payload) {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const res = await fetch(ADMIN_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "Request failed.");
+  return json;
+}
+
+async function createPatient() {
+  const msg = document.getElementById("addPatientMsg");
+  hideMsg(msg);
+  try {
+    const result = await callAdminApi({
+      action: "create_patient",
+      full_name: document.getElementById("apName").value.trim(),
+      age: document.getElementById("apAge").value || null,
+      sex: document.getElementById("apSex").value || null,
+      phone: document.getElementById("apPhone").value.trim(),
+      email: document.getElementById("apEmail").value.trim() || null,
+      patient_code: document.getElementById("apCode").value.trim() || null,
+    });
+    showMsg(msg, `Patient created. Temporary password: ${result.temp_password} — give this to the patient, they'll be asked to change it on first login.`, "success");
+    ["apName","apAge","apSex","apPhone","apEmail","apCode"].forEach(id => document.getElementById(id).value = "");
+    loadPatients();
+  } catch (err) {
+    showMsg(msg, err.message);
+  }
+}
+
+async function loadPatients() {
+  const { data } = await supabaseClient.from("patients").select("*").order("created_at", { ascending: false });
+  allPatients = data || [];
+  renderPatientTable(allPatients);
+}
+
+function renderPatientTable(list) {
+  const body = document.getElementById("patientTableBody");
+  document.getElementById("emptyState").style.display = list.length ? "none" : "block";
+  body.innerHTML = list.map(p => `
+    <tr class="clickable" onclick="openDetail('${p.id}')">
+      <td>${p.patient_code}</td>
+      <td>${p.full_name}</td>
+      <td>${p.phone || "—"}</td>
+      <td><span class="badge ${p.study_status}">${p.study_status === "completed" ? "Completed" : "Active"}</span></td>
+      <td>${fmtDate(p.monitoring_start_date)}</td>
+    </tr>
+  `).join("");
+}
+
+document.getElementById("searchBox").addEventListener("input", (e) => {
+  const q = e.target.value.toLowerCase();
+  renderPatientTable(allPatients.filter(p =>
+    (p.full_name || "").toLowerCase().includes(q) ||
+    (p.patient_code || "").toLowerCase().includes(q) ||
+    (p.phone || "").includes(q)
+  ));
+});
+
+function showList() {
+  document.getElementById("detailView").style.display = "none";
+  document.getElementById("listView").style.display = "block";
+  loadPatients();
+}
+
+async function openDetail(id) {
+  const { data: patient } = await supabaseClient.from("patients").select("*").eq("id", id).single();
+  if (!patient) return;
+  currentDetail = patient;
+
+  document.getElementById("listView").style.display = "none";
+  document.getElementById("detailView").style.display = "block";
+
+  document.getElementById("dName").textContent = patient.full_name;
+  const badge = document.getElementById("dStatusBadge");
+  badge.textContent = patient.study_status === "completed" ? "Completed" : "Active";
+  badge.className = "badge " + patient.study_status;
+
+  document.getElementById("dCode").value = patient.patient_code || "";
+  document.getElementById("dStatus").value = patient.study_status || "active";
+  document.getElementById("dAge").value = patient.age || "";
+  document.getElementById("dSex").value = patient.sex || "";
+  document.getElementById("dPhone").value = patient.phone || "";
+  document.getElementById("dEmail").value = patient.email || "";
+  document.getElementById("dDoctor").value = patient.referring_doctor || "";
+  document.getElementById("dDevice").value = patient.device_serial || "";
+  document.getElementById("dStart").value = patient.monitoring_start_date || "";
+  document.getElementById("dEnd").value = patient.monitoring_end_date || "";
+  document.getElementById("dHistory").value = patient.medical_history || "";
+  hideMsg(document.getElementById("detailMsg"));
+
+  const { data: entries } = await supabaseClient
+    .from("symptom_entries").select("*").eq("patient_id", id).order("entry_time", { ascending: false });
+  currentEntries = entries || [];
+  renderEntries(currentEntries);
+}
+
+function renderEntries(entries) {
+  const body = document.getElementById("entriesTableBody");
+  document.getElementById("entriesEmpty").style.display = entries.length ? "none" : "block";
+  body.innerHTML = entries.map(e => `
+    <tr>
+      <td>${fmtDateTime(e.entry_time)}</td>
+      <td>${(e.symptoms || []).join(", ") || "—"}</td>
+      <td>${e.severity || "—"}</td>
+      <td>${e.activity || "—"}</td>
+      <td>${e.duration || "—"}</td>
+      <td>${e.note || "—"}</td>
+    </tr>
+  `).join("");
+}
+
+async function saveDetail() {
+  const msg = document.getElementById("detailMsg");
+  hideMsg(msg);
+  const updates = {
+    patient_code: document.getElementById("dCode").value.trim(),
+    study_status: document.getElementById("dStatus").value,
+    age: document.getElementById("dAge").value || null,
+    sex: document.getElementById("dSex").value || null,
+    phone: document.getElementById("dPhone").value.trim(),
+    email: document.getElementById("dEmail").value.trim() || null,
+    referring_doctor: document.getElementById("dDoctor").value.trim() || null,
+    device_serial: document.getElementById("dDevice").value.trim() || null,
+    monitoring_start_date: document.getElementById("dStart").value || null,
+    monitoring_end_date: document.getElementById("dEnd").value || null,
+    medical_history: document.getElementById("dHistory").value.trim() || null,
+  };
+  const { error } = await supabaseClient.from("patients").update(updates).eq("id", currentDetail.id);
+  if (error) { showMsg(msg, "Could not save — patient ID may already be in use."); return; }
+  showMsg(msg, "Saved.", "success");
+  Object.assign(currentDetail, updates);
+}
+
+async function resetPatientPassword() {
+  const msg = document.getElementById("detailMsg");
+  hideMsg(msg);
+  if (!confirm(`Generate a new temporary password for ${currentDetail.full_name}?`)) return;
+  try {
+    const result = await callAdminApi({ action: "reset_password", patient_id: currentDetail.id });
+    showMsg(msg, `New temporary password: ${result.temp_password} — read this to the patient over the phone.`, "success");
+  } catch (err) {
+    showMsg(msg, err.message);
+  }
+}
+
+function exportCsv() {
+  const rows = [["Date/Time", "Symptoms", "Severity", "Activity", "Duration", "Note"]];
+  currentEntries.forEach(e => rows.push([
+    fmtDateTime(e.entry_time), (e.symptoms || []).join("; "), e.severity || "", e.activity || "", e.duration || "", (e.note || "").replace(/\n/g, " ")
+  ]));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${currentDetail.patient_code}-entries.csv`;
+  a.click();
+}
+
+async function exportPdf() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // letterhead
+  const img = new Image();
+  img.src = "assets/carditek-logo.png";
+  await new Promise(res => { img.onload = res; img.onerror = res; });
+  try { doc.addImage(img, "PNG", 15, 12, 16, 15); } catch (e) {}
+  doc.setFontSize(14); doc.setFont(undefined, "bold");
+  doc.text("Carditek Medical Devices Pvt Ltd", 36, 20);
+  doc.setFontSize(9); doc.setFont(undefined, "normal");
+  doc.text("Holter Monitoring Report · Contact: 91106 00616", 36, 26);
+  doc.setDrawColor(200); doc.line(15, 32, 195, 32);
+
+  doc.setFontSize(12); doc.setFont(undefined, "bold");
+  doc.text(`Patient: ${currentDetail.full_name}  (ID: ${currentDetail.patient_code})`, 15, 42);
+  doc.setFontSize(10); doc.setFont(undefined, "normal");
+  doc.text(`Age/Sex: ${currentDetail.age || "—"} / ${currentDetail.sex || "—"}    Phone: ${currentDetail.phone || "—"}`, 15, 49);
+  doc.text(`Monitoring: ${fmtDate(currentDetail.monitoring_start_date)} to ${fmtDate(currentDetail.monitoring_end_date)}    Status: ${currentDetail.study_status}`, 15, 55);
+  doc.text(`Device serial: ${currentDetail.device_serial || "—"}`, 15, 61);
+
+  let y = 72;
+  doc.setFontSize(11); doc.setFont(undefined, "bold");
+  doc.text("Symptom entries", 15, y); y += 7;
+  doc.setFontSize(9); doc.setFont(undefined, "normal");
+
+  currentEntries.forEach(e => {
+    if (y > 275) { doc.addPage(); y = 20; }
+    const line1 = `${fmtDateTime(e.entry_time)} — ${(e.symptoms || []).join(", ") || "None"} (${e.severity || "—"})`;
+    const line2 = `${e.activity ? "Activity: " + e.activity + "  " : ""}${e.duration ? "Duration: " + e.duration : ""}`;
+    doc.text(line1, 15, y); y += 5;
+    if (line2.trim()) { doc.text(line2, 15, y); y += 5; }
+    if (e.note) { doc.text(`Note: ${e.note}`, 15, y); y += 5; }
+    y += 2;
+  });
+
+  doc.save(`${currentDetail.patient_code}-report.pdf`);
+}
+
+async function init() {
+  const result = await requireSession("admin");
+  if (!result) return;
+  adminSession = result.session;
+  document.getElementById("app").style.display = "block";
+  loadPatients();
+}
+init();
+</script>
+</body>
+</html>
