@@ -4,14 +4,21 @@ Three pages, plain HTML/CSS/JS (no build step), backed by Supabase, meant to be
 hosted free on GitHub Pages.
 
 ```
-index.html      → login + patient self-registration
-patient.html    → patient dashboard (profile, symptom log, history, WhatsApp help)
-admin.html      → admin dashboard (patient list, add/edit patient, exports, password reset)
-css/style.css   → shared styling
-js/              → shared logic + Supabase config
-assets/          → your logo + favicon (already dropped in)
-supabase/        → database schema + the one server-side function
+index.html        → patient login + self-registration (public entry point)
+admin-login.html  → separate, low-visibility admin login (not shown to patients)
+patient.html      → patient dashboard (profile, symptom log, history, WhatsApp help)
+admin.html        → admin dashboard (patient list, add/edit patient, exports, password reset)
+css/style.css     → shared styling
+js/                → shared logic + Supabase config
+assets/            → your logo + favicon (already dropped in)
+supabase/          → database schema, migrations, and the one server-side function
 ```
+
+**If you already deployed an earlier version:** also run
+`supabase/migrations/001_symptom_notes.sql` in the SQL Editor — it adds the
+column the new per-symptom detail boxes need. Everything else in this update
+is just HTML/CSS/JS, so re-pushing the files to GitHub is all that's needed
+for the rest.
 
 Do these steps in order. None of it needs you to write code — just fill in
 values and copy/paste commands.
@@ -43,6 +50,9 @@ them a confirmation email.
 This is the only way an admin account gets created — there's no public
 "admin sign-up" on the site itself. Anyone visiting the site can only ever
 register as a patient, which is what keeps patient data safe from randoms.
+Admin logs in at `admin-login.html`, a separate page not linked anywhere
+prominent on the patient-facing site (there's a small "Staff login" link in
+the footer). Bookmark that page's URL for yourself.
 
 ## 5. Deploy the one server-side function
 Creating a patient's login and resetting a patient's password both need a

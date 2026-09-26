@@ -21,17 +21,12 @@
 
     <div class="tabs" id="modeTabs">
       <div class="tab active" data-mode="login">Log in</div>
-      <div class="tab" data-mode="register">New patient</div>
+      <div class="tab" data-mode="register">Register</div>
     </div>
 
-    <!-- ============ LOG IN ============ -->
+    <!-- ============ LOG IN (patients only) ============ -->
     <form id="loginForm">
-      <div class="tabs" id="loginRoleTabs">
-        <div class="tab active" data-role="patient">Patient</div>
-        <div class="tab" data-role="admin">Admin</div>
-      </div>
-
-      <label id="loginIdLabel" for="loginId">Phone number</label>
+      <label for="loginId">Phone number</label>
       <input id="loginId" inputmode="tel" placeholder="10-digit phone number" required />
 
       <label for="loginPassword">Password</label>
@@ -72,8 +67,14 @@
       <label for="regEmail">Email (optional)</label>
       <input id="regEmail" type="email" />
 
+      <label for="regDevice">Holter device ID</label>
+      <input id="regDevice" placeholder="Printed on your device / box" />
+
       <label for="regPassword">Create a password</label>
       <input id="regPassword" type="password" minlength="6" required />
+
+      <label for="regPassword2">Re-enter password</label>
+      <input id="regPassword2" type="password" minlength="6" required />
 
       <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-top:16px">
         <input type="checkbox" id="regConsent" style="width:auto;margin-top:3px" required />
@@ -94,10 +95,6 @@
 const modeTabs = document.getElementById("modeTabs");
 const loginForm = document.getElementById("loginForm");
 const registerForm = document.getElementById("registerForm");
-const loginRoleTabs = document.getElementById("loginRoleTabs");
-const loginIdLabel = document.getElementById("loginIdLabel");
-const loginId = document.getElementById("loginId");
-let loginRole = "patient";
 
 modeTabs.addEventListener("click", (e) => {
   const tab = e.target.closest(".tab");
@@ -108,24 +105,6 @@ modeTabs.addEventListener("click", (e) => {
   registerForm.style.display = mode === "register" ? "block" : "none";
 });
 
-loginRoleTabs.addEventListener("click", (e) => {
-  const tab = e.target.closest(".tab");
-  if (!tab) return;
-  [...loginRoleTabs.children].forEach(t => t.classList.toggle("active", t === tab));
-  loginRole = tab.dataset.role;
-  if (loginRole === "admin") {
-    loginIdLabel.textContent = "Admin email";
-    loginId.type = "email";
-    loginId.placeholder = "you@carditek.com";
-    loginId.inputMode = "email";
-  } else {
-    loginIdLabel.textContent = "Phone number";
-    loginId.type = "text";
-    loginId.placeholder = "10-digit phone number";
-    loginId.inputMode = "tel";
-  }
-});
-
 function digitsOnly(s) { return (s || "").replace(/\D/g, ""); }
 function phoneToEmail(phone) { return `${digitsOnly(phone)}@patients.carditek.local`; }
 
@@ -134,17 +113,18 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   const msg = document.getElementById("loginMsg");
   hideMsg(msg);
   const password = document.getElementById("loginPassword").value;
-  const email = loginRole === "admin" ? loginId.value.trim() : phoneToEmail(loginId.value);
+  const email = phoneToEmail(document.getElementById("loginId").value);
 
   const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) { showMsg(msg, "Login failed — check your details and try again.", "error"); return; }
+  if (error) { showMsg(msg, "Login failed — check your phone number and password."); return; }
 
   const { data: profile } = await supabaseClient.from("profiles").select("role").eq("id", data.user.id).single();
-  if (!profile) { showMsg(msg, "Account not set up correctly. Contact admin.", "error"); return; }
-  if (loginRole === "admin" && profile.role !== "admin") { showMsg(msg, "This isn't an admin account.", "error"); await supabaseClient.auth.signOut(); return; }
-  if (loginRole === "patient" && profile.role !== "patient") { showMsg(msg, "This isn't a patient account.", "error"); await supabaseClient.auth.signOut(); return; }
-
-  window.location.href = profile.role === "admin" ? "admin.html" : "patient.html";
+  if (!profile || profile.role !== "patient") {
+    showMsg(msg, "This isn't a patient account.");
+    await supabaseClient.auth.signOut();
+    return;
+  }
+  window.location.href = "patient.html";
 });
 
 document.getElementById("registerForm").addEventListener("submit", async (e) => {
@@ -157,9 +137,12 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
   const sex = document.getElementById("regSex").value || null;
   const phone = document.getElementById("regPhone").value.trim();
   const emailInput = document.getElementById("regEmail").value.trim();
+  const device_serial = document.getElementById("regDevice").value.trim();
   const password = document.getElementById("regPassword").value;
+  const password2 = document.getElementById("regPassword2").value;
 
   if (digitsOnly(phone).length < 10) { showMsg(msg, "Enter a valid 10-digit phone number."); return; }
+  if (password !== password2) { showMsg(msg, "Passwords don't match — check and try again."); return; }
 
   const loginEmail = phoneToEmail(phone);
   const { data: signUpData, error: signUpErr } = await supabaseClient.auth.signUp({
@@ -181,6 +164,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
     id: session.user.id,
     full_name, age, sex, phone,
     email: emailInput || null,
+    device_serial: device_serial || null,
     consent_given: true,
     consent_date: new Date().toISOString(),
   });
@@ -190,5 +174,6 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
 });
 </script>
 <script src="js/common.js"></script>
+<script>injectFooter(true);</script>
 </body>
 </html>

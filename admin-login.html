@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Staff Login — Carditek</title>
+<link rel="icon" href="assets/favicon-32.png" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<main class="center-screen">
+  <div class="card auth-card">
+    <div class="auth-logo">
+      <img src="assets/carditek-logo.png" alt="Carditek" />
+      <div class="company">Staff / Admin Login</div>
+    </div>
+
+    <form id="adminLoginForm">
+      <label for="adminEmail">Admin email</label>
+      <input id="adminEmail" type="email" required />
+
+      <label for="adminPassword">Password</label>
+      <input id="adminPassword" type="password" required />
+
+      <button class="btn btn-primary btn-block" style="margin-top:18px" type="submit">Log in</button>
+      <div class="msg" id="adminLoginMsg"></div>
+    </form>
+
+    <p style="text-align:center;margin-top:18px">
+      <a href="index.html" class="muted" style="font-size:0.85rem">Back to patient login</a>
+    </p>
+  </div>
+</main>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/common.js"></script>
+<script>
+document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("adminLoginMsg");
+  hideMsg(msg);
+  const email = document.getElementById("adminEmail").value.trim();
+  const password = document.getElementById("adminPassword").value;
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) { showMsg(msg, "Login failed — check your details."); return; }
+
+  const { data: profile } = await supabaseClient.from("profiles").select("role").eq("id", data.user.id).single();
+  if (!profile || profile.role !== "admin") {
+    showMsg(msg, "This isn't an admin account.");
+    await supabaseClient.auth.signOut();
+    return;
+  }
+  window.location.href = "admin.html";
+});
+injectFooter(false);
+</script>
+</body>
+</html>

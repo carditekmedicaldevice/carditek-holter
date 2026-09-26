@@ -19,7 +19,7 @@
     <span class="nav-role">Patient</span>
   </div>
   <div class="nav-actions">
-    <button class="btn btn-outline btn-sm" onclick="logout()">Log out</button>
+    <button class="btn btn-outline btn-sm" onclick="logout('index.html')">Log out</button>
   </div>
 </nav>
 
@@ -52,24 +52,47 @@
 
     <!-- ===== New symptom entry ===== -->
     <div class="card" id="entryCard">
-      <h2>How are you feeling right now?</h2>
-      <label>Symptoms (select any that apply)</label>
-      <div class="chip-group" id="symptomChips">
-        <div class="chip" data-value="Palpitations">Palpitations</div>
-        <div class="chip" data-value="Dizziness / Lightheadedness">Dizziness / Lightheadedness</div>
-        <div class="chip" data-value="Chest pain">Chest pain</div>
-        <div class="chip" data-value="Shortness of breath">Shortness of breath</div>
-        <div class="chip" data-value="Fainting / Blackout">Fainting / Blackout</div>
-        <div class="chip" data-value="Fatigue">Fatigue</div>
-        <div class="chip" data-value="Anxiety / Panic">Anxiety / Panic</div>
-        <div class="chip" data-value="None">None right now</div>
+      <h2> How did you feel during this recording?</h2>
+      <label>Tap all that apply</label>
+      <div class="block-group" id="symptomBlocks">
+        <div class="option-block" data-value="Palpitations">
+          <div class="icon">💓</div><div class="label">Palpitations</div>
+          <div class="detail-box"><textarea placeholder="Describe (optional)"></textarea></div>
+        </div>
+        <div class="option-block" data-value="Dizziness / Lightheadedness">
+          <div class="icon">💫</div><div class="label">Dizziness</div>
+          <div class="detail-box"><textarea placeholder="Describe (optional)"></textarea></div>
+        </div>
+        <div class="option-block" data-value="Chest pain">
+          <div class="icon">🫀</div><div class="label">Chest pain</div>
+          <div class="detail-box"><textarea placeholder="Describe (optional)"></textarea></div>
+        </div>
+        <div class="option-block" data-value="Shortness of breath">
+          <div class="icon">😮‍💨</div><div class="label">Breathlessness</div>
+          <div class="detail-box"><textarea placeholder="Describe (optional)"></textarea></div>
+        </div>
+        <div class="option-block" data-value="Fainting / Blackout">
+          <div class="icon">😵</div><div class="label">Fainting</div>
+          <div class="detail-box"><textarea placeholder="Describe (optional)"></textarea></div>
+        </div>
+        <div class="option-block" data-value="Fatigue">
+          <div class="icon">🥱</div><div class="label">Fatigue</div>
+          <div class="detail-box"><textarea placeholder="Describe (optional)"></textarea></div>
+        </div>
+        <div class="option-block" data-value="Anxiety / Panic">
+          <div class="icon">😟</div><div class="label">Anxiety</div>
+          <div class="detail-box"><textarea placeholder="Describe (optional)"></textarea></div>
+        </div>
+        <div class="option-block" data-value="None">
+          <div class="icon">✅</div><div class="label">None right now</div>
+        </div>
       </div>
 
-      <label>Severity</label>
-      <div class="chip-group severity" id="severityChips">
-        <div class="chip" data-value="mild">Mild</div>
-        <div class="chip" data-value="moderate">Moderate</div>
-        <div class="chip" data-value="severe">Severe</div>
+      <label style="margin-top:20px">Severity</label>
+      <div class="block-group severity-blocks" id="severityBlocks">
+        <div class="option-block" data-value="mild"><div class="icon">🙂</div><div class="label">Mild</div></div>
+        <div class="option-block" data-value="moderate"><div class="icon">😐</div><div class="label">Moderate</div></div>
+        <div class="option-block" data-value="severe"><div class="icon">😣</div><div class="label">Severe</div></div>
       </div>
 
       <label for="activitySelect">What were you doing?</label>
@@ -91,9 +114,6 @@
         <option>5–30 minutes</option>
         <option>More than 30 minutes</option>
       </select>
-
-      <label for="noteInput">Anything else? (optional)</label>
-      <textarea id="noteInput" placeholder="Optional notes..."></textarea>
 
       <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="submitEntry()">Submit entry</button>
       <div class="msg" id="entryMsg"></div>
@@ -121,30 +141,61 @@ let currentPatient = null;
 let selectedSymptoms = new Set();
 let selectedSeverity = null;
 
-document.getElementById("symptomChips").addEventListener("click", (e) => {
-  const chip = e.target.closest(".chip");
-  if (!chip) return;
-  const val = chip.dataset.value;
+const symptomBlocksEl = document.getElementById("symptomBlocks");
+symptomBlocksEl.addEventListener("click", (e) => {
+  const box = e.target.closest(".detail-box");
+  const block = e.target.closest(".option-block");
+  if (!block) return;
+  if (box) return; // clicking inside the textarea shouldn't toggle the block
+
+  const val = block.dataset.value;
   if (val === "None") {
     selectedSymptoms.clear();
-    [...document.getElementById("symptomChips").children].forEach(c => c.classList.remove("selected"));
-    chip.classList.add("selected");
+    [...symptomBlocksEl.children].forEach(b => { b.classList.remove("selected"); const d = b.querySelector(".detail-box"); if (d) d.classList.remove("show"); });
+    block.classList.add("selected");
     selectedSymptoms.add("None");
   } else {
-    document.querySelector('#symptomChips .chip[data-value="None"]').classList.remove("selected");
+    const noneBlock = symptomBlocksEl.querySelector('.option-block[data-value="None"]');
+    noneBlock.classList.remove("selected");
     selectedSymptoms.delete("None");
-    chip.classList.toggle("selected");
-    if (chip.classList.contains("selected")) selectedSymptoms.add(val); else selectedSymptoms.delete(val);
+    block.classList.toggle("selected");
+    const detailBox = block.querySelector(".detail-box");
+    if (block.classList.contains("selected")) {
+      selectedSymptoms.add(val);
+      if (detailBox) detailBox.classList.add("show");
+    } else {
+      selectedSymptoms.delete(val);
+      if (detailBox) { detailBox.classList.remove("show"); detailBox.querySelector("textarea").value = ""; }
+    }
   }
 });
 
-document.getElementById("severityChips").addEventListener("click", (e) => {
-  const chip = e.target.closest(".chip");
-  if (!chip) return;
-  [...document.getElementById("severityChips").children].forEach(c => c.classList.remove("selected"));
-  chip.classList.add("selected");
-  selectedSeverity = chip.dataset.value;
+document.getElementById("severityBlocks").addEventListener("click", (e) => {
+  const block = e.target.closest(".option-block");
+  if (!block) return;
+  [...document.getElementById("severityBlocks").children].forEach(b => b.classList.remove("selected"));
+  block.classList.add("selected");
+  selectedSeverity = block.dataset.value;
 });
+
+function collectSymptomNotes() {
+  const notes = {};
+  symptomBlocksEl.querySelectorAll(".option-block.selected").forEach(b => {
+    const ta = b.querySelector(".detail-box textarea");
+    if (ta && ta.value.trim()) notes[b.dataset.value] = ta.value.trim();
+  });
+  return notes;
+}
+
+function resetSymptomForm() {
+  selectedSymptoms.clear(); selectedSeverity = null;
+  symptomBlocksEl.querySelectorAll(".option-block").forEach(b => {
+    b.classList.remove("selected");
+    const d = b.querySelector(".detail-box");
+    if (d) { d.classList.remove("show"); d.querySelector("textarea").value = ""; }
+  });
+  document.getElementById("severityBlocks").querySelectorAll(".option-block").forEach(b => b.classList.remove("selected"));
+}
 
 async function changePassword() {
   const msg = document.getElementById("pwMsg");
@@ -163,7 +214,7 @@ async function submitEntry() {
   hideMsg(msg);
   const activity = document.getElementById("activitySelect").value;
   const duration = document.getElementById("durationSelect").value;
-  const note = document.getElementById("noteInput").value.trim();
+  const symptom_notes = collectSymptomNotes();
 
   const { error } = await supabaseClient.from("symptom_entries").insert({
     patient_id: currentPatient.id,
@@ -171,16 +222,14 @@ async function submitEntry() {
     severity: selectedSeverity,
     activity: activity || null,
     duration: duration || null,
-    note: note || null,
+    symptom_notes,
   });
   if (error) { showMsg(msg, "Could not save entry. Try again."); return; }
 
   showMsg(msg, "Entry saved. Thank you.", "success");
-  selectedSymptoms.clear(); selectedSeverity = null;
-  document.querySelectorAll("#symptomChips .chip, #severityChips .chip").forEach(c => c.classList.remove("selected"));
+  resetSymptomForm();
   document.getElementById("activitySelect").value = "";
   document.getElementById("durationSelect").value = "";
-  document.getElementById("noteInput").value = "";
   loadHistory();
 }
 
@@ -204,7 +253,7 @@ async function loadHistory() {
       <p class="muted" style="margin:6px 0 0">
         ${e.severity ? "Severity: " + e.severity + " · " : ""}${e.activity ? "While " + e.activity.toLowerCase() + " · " : ""}${e.duration || ""}
       </p>
-      ${e.note ? `<p style="margin:6px 0 0">${e.note}</p>` : ""}
+      ${e.symptom_notes && Object.keys(e.symptom_notes).length ? `<div style="margin-top:6px">${Object.entries(e.symptom_notes).map(([s,n]) => `<p class="muted" style="margin:2px 0"><strong>${s}:</strong> ${n}</p>`).join("")}</div>` : ""}
     </div>
   `).join("");
 }
@@ -242,6 +291,7 @@ async function init() {
   }
 }
 init();
+injectFooter(false);
 </script>
 </body>
 </html>

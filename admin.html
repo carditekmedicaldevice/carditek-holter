@@ -19,7 +19,7 @@
     <span class="nav-role">Admin</span>
   </div>
   <div class="nav-actions">
-    <button class="btn btn-outline btn-sm" onclick="logout()">Log out</button>
+    <button class="btn btn-outline btn-sm" onclick="logout('admin-login.html')">Log out</button>
   </div>
 </nav>
 
@@ -235,6 +235,11 @@ async function openDetail(id) {
   renderEntries(currentEntries);
 }
 
+function notesToText(symptom_notes) {
+  if (!symptom_notes || !Object.keys(symptom_notes).length) return "—";
+  return Object.entries(symptom_notes).map(([s, n]) => `${s}: ${n}`).join("; ");
+}
+
 function renderEntries(entries) {
   const body = document.getElementById("entriesTableBody");
   document.getElementById("entriesEmpty").style.display = entries.length ? "none" : "block";
@@ -245,7 +250,7 @@ function renderEntries(entries) {
       <td>${e.severity || "—"}</td>
       <td>${e.activity || "—"}</td>
       <td>${e.duration || "—"}</td>
-      <td>${e.note || "—"}</td>
+      <td>${notesToText(e.symptom_notes)}</td>
     </tr>
   `).join("");
 }
@@ -285,9 +290,9 @@ async function resetPatientPassword() {
 }
 
 function exportCsv() {
-  const rows = [["Date/Time", "Symptoms", "Severity", "Activity", "Duration", "Note"]];
+  const rows = [["Date/Time", "Symptoms", "Severity", "Activity", "Duration", "Detail"]];
   currentEntries.forEach(e => rows.push([
-    fmtDateTime(e.entry_time), (e.symptoms || []).join("; "), e.severity || "", e.activity || "", e.duration || "", (e.note || "").replace(/\n/g, " ")
+    fmtDateTime(e.entry_time), (e.symptoms || []).join("; "), e.severity || "", e.activity || "", e.duration || "", notesToText(e.symptom_notes).replace(/\n/g, " ")
   ]));
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
@@ -297,44 +302,105 @@ function exportCsv() {
   a.click();
 }
 
+const ALL_SYMPTOM_TYPES = ["Palpitations", "Dizziness / Lightheadedness", "Chest pain", "Shortness of breath", "Fainting / Blackout", "Fatigue", "Anxiety / Panic"];
+
+function newPageIfNeeded(doc, y, margin = 275) {
+  if (y > margin) { doc.addPage(); return 20; }
+  return y;
+}
+
 async function exportPdf() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
 
-  // letterhead
+  // ---- Letterhead (logo + company name, per every page's footer/header requirement) ----
   const img = new Image();
   img.src = "assets/carditek-logo.png";
   await new Promise(res => { img.onload = res; img.onerror = res; });
-  try { doc.addImage(img, "PNG", 15, 12, 16, 15); } catch (e) {}
-  doc.setFontSize(14); doc.setFont(undefined, "bold");
-  doc.text("Carditek Medical Devices Pvt Ltd", 36, 20);
+  try { doc.addImage(img, "PNG", 15, 12, 14, 13); } catch (e) {}
+  doc.setFontSize(13); doc.setFont(undefined, "bold");
+  doc.text("Carditek Medical Devices Pvt Ltd", 34, 19);
   doc.setFontSize(9); doc.setFont(undefined, "normal");
-  doc.text("Holter Monitoring Report · Contact: 91106 00616", 36, 26);
-  doc.setDrawColor(200); doc.line(15, 32, 195, 32);
+  doc.text("Patient Diary — Symptom Log", 34, 25);
+  doc.setDrawColor(200); doc.line(15, 31, pageWidth - 15, 31);
 
-  doc.setFontSize(12); doc.setFont(undefined, "bold");
-  doc.text(`Patient: ${currentDetail.full_name}  (ID: ${currentDetail.patient_code})`, 15, 42);
-  doc.setFontSize(10); doc.setFont(undefined, "normal");
-  doc.text(`Age/Sex: ${currentDetail.age || "—"} / ${currentDetail.sex || "—"}    Phone: ${currentDetail.phone || "—"}`, 15, 49);
-  doc.text(`Monitoring: ${fmtDate(currentDetail.monitoring_start_date)} to ${fmtDate(currentDetail.monitoring_end_date)}    Status: ${currentDetail.study_status}`, 15, 55);
-  doc.text(`Device serial: ${currentDetail.device_serial || "—"}`, 15, 61);
+  // ---- Identification block (matches the paper form's top table) ----
+  let y = 40;
+  doc.setFontSize(10); doc.setFont(undefined, "bold");
+  doc.text(`Name / ID: ${currentDetail.full_name} (${currentDetail.patient_code})`, 15, y);
+  doc.text(`Date: ${fmtDate(new Date())}`, 140, y);
+  y += 6;
+  doc.setFont(undefined, "normal");
+  doc.text(`Device ID: ${currentDetail.device_serial || "—"}`, 15, y);
+  doc.text(`Referring doctor: ${currentDetail.referring_doctor || "—"}`, 100, y);
+  y += 6;
+  doc.text(`Monitoring: ${fmtDate(currentDetail.monitoring_start_date)} to ${fmtDate(currentDetail.monitoring_end_date)}`, 15, y);
+  doc.text(`Status: ${currentDetail.study_status === "completed" ? "Completed" : "Active"}`, 140, y);
+  y += 10;
 
-  let y = 72;
-  doc.setFontSize(11); doc.setFont(undefined, "bold");
-  doc.text("Symptom entries", 15, y); y += 7;
-  doc.setFontSize(9); doc.setFont(undefined, "normal");
-
-  currentEntries.forEach(e => {
-    if (y > 275) { doc.addPage(); y = 20; }
-    const line1 = `${fmtDateTime(e.entry_time)} — ${(e.symptoms || []).join(", ") || "None"} (${e.severity || "—"})`;
-    const line2 = `${e.activity ? "Activity: " + e.activity + "  " : ""}${e.duration ? "Duration: " + e.duration : ""}`;
-    doc.text(line1, 15, y); y += 5;
-    if (line2.trim()) { doc.text(line2, 15, y); y += 5; }
-    if (e.note) { doc.text(`Note: ${e.note}`, 15, y); y += 5; }
-    y += 2;
+  // ---- Section 1: symptoms ever reported (tick-list, like the paper form) ----
+  doc.setFont(undefined, "bold"); doc.setFontSize(11);
+  doc.text("1. Symptoms reported during monitoring", 15, y); y += 7;
+  doc.setFont(undefined, "normal"); doc.setFontSize(9);
+  const reported = new Set();
+  currentEntries.forEach(e => (e.symptoms || []).forEach(s => s !== "None" && reported.add(s)));
+  ALL_SYMPTOM_TYPES.forEach((s, i) => {
+    const col = i % 2 === 0 ? 15 : 105;
+    if (i % 2 === 0 && i > 0) y += 6;
+    doc.text(`${reported.has(s) ? "[x]" : "[ ]"} ${s}`, col, y);
   });
+  y += 14;
 
-  doc.save(`${currentDetail.patient_code}-report.pdf`);
+  // ---- Section 2: timestamped entries table ----
+  y = newPageIfNeeded(doc, y);
+  doc.setFont(undefined, "bold"); doc.setFontSize(11);
+  doc.text("2. Symptom entries — time, severity, activity", 15, y); y += 7;
+  doc.setFontSize(8);
+  doc.setFillColor(240, 240, 245);
+  doc.rect(15, y - 4, pageWidth - 30, 6, "F");
+  doc.setFont(undefined, "bold");
+  doc.text("Time", 16, y); doc.text("Severity", 42, y); doc.text("Symptom(s)", 66, y);
+  doc.text("Activity", 120, y); doc.text("Duration", 148, y); doc.text("Detail", 172, y);
+  y += 6;
+  doc.setFont(undefined, "normal");
+
+  if (currentEntries.length === 0) {
+    doc.text("No entries logged yet.", 15, y); y += 6;
+  }
+  currentEntries.forEach(e => {
+    y = newPageIfNeeded(doc, y);
+    const detail = notesToText(e.symptom_notes);
+    doc.text(fmtDateTime(e.entry_time), 16, y, { maxWidth: 24 });
+    doc.text(e.severity || "—", 42, y);
+    doc.text((e.symptoms || []).join(", ") || "None", 66, y, { maxWidth: 52 });
+    doc.text(e.activity || "—", 120, y, { maxWidth: 26 });
+    doc.text(e.duration || "—", 148, y, { maxWidth: 22 });
+    doc.text(detail === "—" ? "—" : detail, 172, y, { maxWidth: 24 });
+    y += 7;
+  });
+  y += 6;
+
+  // ---- Sign-off (matches the paper form's bottom line) ----
+  y = newPageIfNeeded(doc, y, 265);
+  doc.setDrawColor(200); doc.line(15, y, pageWidth - 15, y); y += 8;
+  doc.setFontSize(9);
+  doc.text(`Patient: ${currentDetail.full_name}`, 15, y);
+  doc.text(`Report generated: ${fmtDateTime(new Date())}`, 100, y);
+  y += 10;
+  doc.text("Staff verified: ________________________", 15, y);
+
+  // ---- Footer with contact + emergency number, every page ----
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    const h = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8); doc.setTextColor(120);
+    doc.text("Carditek Medical Devices Pvt Ltd · Contact: 91106 00616 · Emergency only: 98441 10277", 15, h - 10);
+    doc.setTextColor(0);
+  }
+
+  doc.save(`${currentDetail.patient_code}-diary.pdf`);
 }
 
 async function init() {
@@ -345,6 +411,7 @@ async function init() {
   loadPatients();
 }
 init();
+injectFooter(false);
 </script>
 </body>
 </html>
