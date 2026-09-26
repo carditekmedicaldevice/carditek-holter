@@ -33,9 +33,10 @@ function hideMsg(el) {
 }
 
 async function requireSession(expectedRole) {
+  const loginPage = expectedRole === "admin" ? "admin-login.html" : "index.html";
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
-    window.location.href = "index.html";
+    window.location.href = loginPage;
     return null;
   }
   const { data: profile } = await supabaseClient
@@ -46,15 +47,27 @@ async function requireSession(expectedRole) {
 
   if (!profile || profile.role !== expectedRole) {
     await supabaseClient.auth.signOut();
-    window.location.href = "index.html";
+    window.location.href = loginPage;
     return null;
   }
   return { session, profile };
 }
 
-async function logout() {
+async function logout(destination) {
   await supabaseClient.auth.signOut();
-  window.location.href = "index.html";
+  window.location.href = destination || "index.html";
+}
+
+function injectFooter(showStaffLink) {
+  const f = document.createElement("footer");
+  f.className = "site-footer";
+  f.innerHTML = `
+    <div class="company">Carditek Medical Devices Pvt Ltd</div>
+    <div class="contact">Contact: 91106 00616</div>
+    <div class="emergency">Emergency only: 98441 10277</div>
+    ${showStaffLink ? '<a class="quiet-link" href="admin-login.html">Staff login</a>' : ""}
+  `;
+  document.body.appendChild(f);
 }
 
 function fmtDate(d) {

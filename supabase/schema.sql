@@ -79,7 +79,7 @@ create table public.symptom_entries (
   severity text check (severity in ('mild','moderate','severe')),
   activity text,                            -- what they were doing
   duration text,                            -- how long it lasted
-  note text,                                -- optional free text
+  symptom_notes jsonb not null default '{}'::jsonb,  -- optional per-symptom detail, e.g. {"Chest pain":"..."}
   created_at timestamptz not null default now()
 );
 

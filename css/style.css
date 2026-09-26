@@ -4,17 +4,17 @@
      --ink        deep purple (headings, nav, primary text)
      --plum       mid purple (secondary text, borders)
      --lavender   soft purple (muted UI, subtle fills)
-     --lime       accent lime (primary actions)
-     --lime-pale  pale lime (highlight backgrounds)
+     --accent       accent blue (primary actions) -- trust/clinical blue, not the logo green
+     --accent-pale  pale blue (highlight backgrounds)
    ============================================================ */
 
 :root {
   --ink: #2A1D3F;
   --plum: #503A6A;
   --lavender: #9E8DB3;
-  --lime: #B8D05E;
-  --lime-deep: #93AC3E;
-  --lime-pale: #F3FFCB;
+  --accent: #2F6FA6;
+  --accent-deep: #1F4F7A;
+  --accent-pale: #EAF3FB;
   --bg: #FAFAF8;
   --surface: #FFFFFF;
   --line: #E7E2ED;
@@ -66,7 +66,7 @@ a { color: var(--plum); }
 .nav-brand { display: flex; align-items: center; gap: 10px; }
 .nav-brand img { height: 32px; width: auto; display: block; }
 .nav-brand .name { font-weight: 800; font-size: 1rem; color: var(--ink); }
-.nav-role { font-size: 0.8rem; color: var(--plum); background: var(--lime-pale); padding: 3px 10px; border-radius: 999px; }
+.nav-role { font-size: 0.8rem; color: var(--plum); background: var(--accent-pale); padding: 3px 10px; border-radius: 999px; }
 .nav-actions { display: flex; align-items: center; gap: 10px; }
 
 /* ---------- Layout ---------- */
@@ -130,9 +130,9 @@ input, select, textarea {
   color: var(--ink);
 }
 input:focus, select:focus, textarea:focus {
-  outline: 2px solid var(--lime-deep);
+  outline: 2px solid var(--accent-deep);
   outline-offset: 1px;
-  border-color: var(--lime-deep);
+  border-color: var(--accent-deep);
 }
 textarea { resize: vertical; min-height: 80px; }
 .hint { font-size: 0.78rem; color: var(--plum); margin-top: 4px; }
@@ -170,8 +170,8 @@ textarea { resize: vertical; min-height: 80px; }
   cursor: pointer;
   text-decoration: none;
 }
-.btn-primary { background: var(--lime); color: var(--ink); }
-.btn-primary:hover { background: var(--lime-deep); }
+.btn-primary { background: var(--accent); color: #FFFFFF; }
+.btn-primary:hover { background: var(--accent-deep); }
 .btn-block { width: 100%; }
 .btn-outline { background: transparent; border: 1px solid var(--line); color: var(--ink); }
 .btn-outline:hover { border-color: var(--plum); }
@@ -181,11 +181,11 @@ textarea { resize: vertical; min-height: 80px; }
 
 /* ---------- Status / misc ---------- */
 .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
-.badge.active { background: var(--lime-pale); color: var(--lime-deep); }
+.badge.active { background: var(--accent-pale); color: var(--accent-deep); }
 .badge.completed { background: var(--line); color: var(--plum); }
 .msg { padding: 10px 14px; border-radius: 8px; font-size: 0.88rem; margin-top: 12px; }
 .msg.error { background: #FBEAE8; color: var(--danger); }
-.msg.success { background: var(--lime-pale); color: var(--lime-deep); }
+.msg.success { background: var(--accent-pale); color: var(--accent-deep); }
 .muted { color: var(--plum); font-size: 0.85rem; }
 .divider { height: 1px; background: var(--line); margin: 18px 0; }
 table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
@@ -195,6 +195,56 @@ tr.clickable { cursor: pointer; }
 tr.clickable:hover { background: var(--bg); }
 .search-input { max-width: 320px; }
 .empty-state { text-align: center; padding: 40px 20px; color: var(--plum); }
+
+/* ---------- Footer (every page) ---------- */
+.site-footer {
+  margin-top: auto;
+  padding: 18px 20px 26px;
+  text-align: center;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.site-footer .company { font-weight: 800; font-size: 0.9rem; color: var(--ink); }
+.site-footer .contact { font-size: 0.82rem; color: var(--plum); margin-top: 4px; }
+.site-footer .emergency { font-size: 0.8rem; color: var(--danger); font-weight: 700; margin-top: 4px; }
+.site-footer .quiet-link { display: inline-block; margin-top: 10px; font-size: 0.72rem; color: var(--lavender); text-decoration: none; }
+
+/* ---------- Large block-style options (elderly / low-tech friendly) ---------- */
+.block-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+.block-group.single-col { grid-template-columns: 1fr; }
+.option-block {
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 14px;
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.option-block .icon { font-size: 1.6rem; line-height: 1; margin-bottom: 6px; }
+.option-block .label { font-size: 1rem; font-weight: 700; color: var(--ink); }
+.option-block.selected { border-color: var(--accent); background: var(--accent-pale); }
+.option-block .detail-box {
+  display: none;
+  margin-top: 10px;
+}
+.option-block.selected .detail-box.show { display: block; }
+.option-block .detail-box textarea {
+  font-size: 0.9rem;
+  min-height: 56px;
+}
+.severity-blocks { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 480px) {
+  .block-group { grid-template-columns: 1fr 1fr; }
+  .option-block { padding: 14px 10px; }
+  .option-block .icon { font-size: 1.4rem; }
+  .option-block .label { font-size: 0.92rem; }
+}
 
 /* ---------- WhatsApp floating help button ---------- */
 .whatsapp-fab {
