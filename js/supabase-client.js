@@ -4,9 +4,8 @@
 // within the limits set by the Row Level Security policies in
 // supabase/schema.sql. Never put the "service_role" key here.
 // ============================================================
-const SUPABASE_URL = 'https://synmlrjvutavlnqtebmh.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_LqJo3_9AjaKR_4sr_z4tHA_VFwaqclU';
-
+const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
 
 // The deployed admin-api Edge Function URL (see README "Deploy the Edge Function")
 const ADMIN_API_URL = `${SUPABASE_URL}/functions/v1/admin-api`;

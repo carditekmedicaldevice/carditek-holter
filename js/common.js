@@ -2,7 +2,7 @@
 // Shared helpers used by patient.html and admin.html
 // ============================================================
 
-const WHATSAPP_NUMBER = "919110600616"; // country code 91 + 9110600616
+const WHATSAPP_NUMBER = "918618958067"; // country code 91 + 8618958067
 
 function whatsappLink(patientName, patientCode) {
   const text = `Hi, this is ${patientName} (ID: ${patientCode}). I need help regarding my Holter monitoring.`;
@@ -58,13 +58,22 @@ async function logout(destination) {
   window.location.href = destination || "index.html";
 }
 
+function parseSymptomNotes(raw) {
+  if (!raw) return {};
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw); } catch (e) { return {}; }
+  }
+  return raw;
+}
+
 function injectFooter(showStaffLink) {
   const f = document.createElement("footer");
   f.className = "site-footer";
   f.innerHTML = `
     <div class="company">Carditek Medical Devices Pvt Ltd</div>
-    <div class="contact">Contact: 91106 00616</div>
+    <div class="contact">Contact: 86189 58067</div>
     <div class="emergency">Emergency only: 98441 10277</div>
+    <a class="quiet-link" href="https://script.google.com/macros/s/AKfycbyCXT4dwyIeV2LntYQ4DK2w8et0iodKiSH_vdgkUl6g9lP7tE3O4Hi0ICaV7yZTGfmHdg/exec" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--accent-deep);font-weight:700">For appointment booking, click here</a>
     ${showStaffLink ? '<a class="quiet-link" href="admin-login.html">Staff login</a>' : ""}
   `;
   document.body.appendChild(f);
