@@ -59,11 +59,9 @@ async function logout(destination) {
 }
 
 function parseSymptomNotes(raw) {
-  if (!raw) return {};
-  if (typeof raw === "string") {
-    try { return JSON.parse(raw); } catch (e) { return {}; }
-  }
-  return raw;
+    if (!raw) return "";
+    if (typeof raw === "string") return raw;
+    return String(raw);
 }
 
 function injectFooter(showStaffLink) {
