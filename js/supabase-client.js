@@ -5,7 +5,7 @@
 // supabase/schema.sql. Never put the "service_role" key here.
 // ============================================================
 const SUPABASE_URL = "https://synmlrjvutavlnqtebmh.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_LqJo3_9AjaKR_4sr_z4tHA_VFwaqclU";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5bm1scmp2dXRhdmxucXRlYm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzMTk4ODMsImV4cCI6MjEwNTg5NTg4M30.gvF9NrMuR69K_LVAqeNBMAzSi6_R-mFSgpouihUzbe0";
 
 // The deployed admin-api Edge Function URL (see README "Deploy the Edge Function")
 const ADMIN_API_URL = `${SUPABASE_URL}/functions/v1/admin-api`;
