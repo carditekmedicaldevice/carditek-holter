@@ -114,7 +114,7 @@
     <div class="card">
       <h2>Symptom entries</h2>
       <table>
-        <thead><tr><th>When</th><th>Symptoms</th><th>Severity</th><th>Activity</th><th>Duration</th><th>Note</th></tr></thead>
+        <thead><tr><th>When</th><th>Symptoms</th><th>Severity</th><th>Activity</th><th>Duration</th><th>Detail</th></tr></thead>
         <tbody id="entriesTableBody"></tbody>
       </table>
       <div class="empty-state" id="entriesEmpty" style="display:none">No entries logged yet.</div>
@@ -137,13 +137,19 @@ function closeAddPatient() { document.getElementById("addPatientCard").style.dis
 
 async function callAdminApi(payload) {
   const { data: { session } } = await supabaseClient.auth.getSession();
-  const res = await fetch(ADMIN_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-    body: JSON.stringify(payload),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || "Request failed.");
+  let res;
+  try {
+    res = await fetch(ADMIN_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload),
+    });
+  } catch (networkErr) {
+    throw new Error("Could not reach the admin-api function. It usually means the Edge Function isn't deployed yet in Supabase — see README step 5.");
+  }
+  let json;
+  try { json = await res.json(); } catch (e) { json = {}; }
+  if (!res.ok) throw new Error(json.error || `Request failed (status ${res.status}).`);
   return json;
 }
 
@@ -236,8 +242,10 @@ async function openDetail(id) {
 }
 
 function notesToText(symptom_notes) {
-  if (!symptom_notes || !Object.keys(symptom_notes).length) return "—";
-  return Object.entries(symptom_notes).map(([s, n]) => `${s}: ${n}`).join("; ");
+  const notes = parseSymptomNotes(symptom_notes);
+  const keys = Object.keys(notes);
+  if (!keys.length) return "—";
+  return keys.map(k => `${k}: ${notes[k]}`).join("; ");
 }
 
 function renderEntries(entries) {

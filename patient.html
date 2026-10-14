@@ -52,7 +52,7 @@
 
     <!-- ===== New symptom entry ===== -->
     <div class="card" id="entryCard">
-      <h2> How did you feel during this recording?</h2>
+      <h2>How are you feeling right now?</h2>
       <label>Tap all that apply</label>
       <div class="block-group" id="symptomBlocks">
         <div class="option-block" data-value="Palpitations">
@@ -253,7 +253,7 @@ async function loadHistory() {
       <p class="muted" style="margin:6px 0 0">
         ${e.severity ? "Severity: " + e.severity + " · " : ""}${e.activity ? "While " + e.activity.toLowerCase() + " · " : ""}${e.duration || ""}
       </p>
-      ${e.symptom_notes && Object.keys(e.symptom_notes).length ? `<div style="margin-top:6px">${Object.entries(e.symptom_notes).map(([s,n]) => `<p class="muted" style="margin:2px 0"><strong>${s}:</strong> ${n}</p>`).join("")}</div>` : ""}
+      ${(() => { const n = parseSymptomNotes(e.symptom_notes); const keys = Object.keys(n); return keys.length ? `<div style="margin-top:6px">${keys.map(k => `<p class="muted" style="margin:2px 0"><strong>${k}:</strong> ${n[k]}</p>`).join("")}</div>` : ""; })()}
     </div>
   `).join("");
 }

@@ -31,6 +31,7 @@
 
       <label for="loginPassword">Password</label>
       <input id="loginPassword" type="password" required />
+    
 
       <button class="btn btn-primary btn-block" style="margin-top:18px" type="submit">Log in</button>
       <div class="msg" id="loginMsg"></div>
@@ -69,6 +70,9 @@
 
       <label for="regDevice">Holter device ID</label>
       <input id="regDevice" placeholder="Printed on your device / box" />
+
+      <label for="regDoctor">Referring doctor</label>
+      <input id="regDoctor" placeholder="Doctor who referred you" />
 
       <label for="regPassword">Create a password</label>
       <input id="regPassword" type="password" minlength="6" required />
@@ -138,6 +142,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
   const phone = document.getElementById("regPhone").value.trim();
   const emailInput = document.getElementById("regEmail").value.trim();
   const device_serial = document.getElementById("regDevice").value.trim();
+  const referring_doctor = document.getElementById("regDoctor").value.trim();
   const password = document.getElementById("regPassword").value;
   const password2 = document.getElementById("regPassword2").value;
 
@@ -165,6 +170,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
     full_name, age, sex, phone,
     email: emailInput || null,
     device_serial: device_serial || null,
+    referring_doctor: referring_doctor || null,
     consent_given: true,
     consent_date: new Date().toISOString(),
   });
